@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dars jadvali · Ota-onalar</title>
+<style>
+  :root { --bg:#f4f6fb; --card:#fff; --ink:#1d2433; --muted:#6b7690; --brand:#2b59c3; --accent:#6a4cc9; --live:#1e8f5a; --line:#e6ebf5; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0d1220; --card:#161e31; --ink:#e8edf9; --muted:#97a3c4; --brand:#7ea2ff; --accent:#a58cff; --live:#3ddc97; --line:#24304b; } }
+  :root[data-theme="dark"] { --bg:#0d1220; --card:#161e31; --ink:#e8edf9; --muted:#97a3c4; --brand:#7ea2ff; --accent:#a58cff; --live:#3ddc97; --line:#24304b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); font-size: 16px; }
+  header { background: linear-gradient(135deg, var(--brand), var(--accent)); color: #fff; padding: 22px 16px; text-align: center; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 6px 0 0; opacity: .92; font-size: 14px; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  h2 { margin: 0 0 10px; font-size: 17px; color: var(--brand); }
+  label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
+  select, button, input { font: inherit; }
+  select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 17px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 12px 16px; border-radius: 12px; border: none; background: var(--brand); color: #fff; cursor: pointer; font-weight: 600; }
+  .btn.light { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  .status { font-size: 19px; font-weight: 700; margin: 4px 0 6px; }
+  .status.live { color: var(--live); }
+  .sub { font-size: 14px; color: var(--muted); }
+  .bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, var(--brand), var(--accent)); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-size: 14px; }
+  .tab.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  td { padding: 10px 6px; border-bottom: 1px solid var(--line); }
+  tr.now td { color: var(--live); font-weight: 700; }
+  tr.done td { color: var(--muted); }
+  td.n { width: 34px; color: var(--muted); }
+  td.t { width: 110px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .scan { display: none; margin-top: 12px; }
+  .scan video { width: 100%; border-radius: 12px; background: #000; }
+  footer { text-align: center; padding: 18px 16px 30px; color: var(--muted); font-size: 14px; }
+  footer a { color: var(--brand); font-weight: 600; }
+  .tgbtn { display: inline-block; margin-top: 6px; padding: 12px 18px; border-radius: 12px; background: var(--brand); color: #fff !important; text-decoration: none; }
+  .contact { margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dars jadvali</h1>
+  <p id="schoolLine"></p>
+</header>
+<main>
+  <div class="card">
+    <label for="cls">Farzandingizning sinfini tanlang</label>
+    <select id="cls"></select>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="scanBtn">📷 QR kodni skaner qilish</button>
+      <button class="btn light" id="todayBtn">Bugun</button>
+    </div>
+    <div class="scan" id="scanBox"><video id="video" playsinline></video><p class="sub" id="scanMsg">Kamerani QR kodga qarating</p></div>
+  </div>
+
+  <div class="card" id="statusCard">
+    <div class="sub" id="dayLine"></div>
+    <div class="status" id="statusText">Yuklanmoqda...</div>
+    <div class="sub" id="statusSub"></div>
+    <div class="bar" id="progress" style="display:none"><div id="progressFill" style="width:0"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Kun bo'yicha jadval</h2>
+    <div class="tabs" id="tabs"></div>
+    <table id="table"></table>
+  </div>
+</main>
+<footer>
+  <div>Xona topilmasa, <b>admin bilan bog'laning</b>.</div>
+  <div class="contact"><a class="tgbtn" id="tg" href="#" target="_blank" rel="noopener">📣 <span id="tgLabel"></span> · <span id="tgName"></span></a></div>
+</footer>
+
+<script>
+// ===== 5-sonli umumiy o'rta ta'lim maktabi · Dars jadvali 2026–2027 =====
+// Ma'lumot rasmdan kiritilgan. Xato bo'lsa shu faylda to'g'rilang.
+// Hafta kunlari: [Dushanba, Seshanba, Chorshanba, Payshanba, Juma, Shanba]
+// Har kunda 6 ta katak (1-darsdan 6-darsgacha). null = dars yo'q.
+
+const CONFIG = {
+  school: "5-sonli umumiy o'rta ta'lim maktabi",
+  district: "Bo'stonliq tumani",
+  year: "2026–2027",
+  adminTg: "https://t.me/Xusenov_a1",
+  adminTgName: "@Xusenov_a1",
+  adminLabel: "Telegram kanalimiz",
+};
+
+const TIMES = {
+  T1: ["08:00-08:45", "08:50-09:35", "09:40-10:25", "10:35-11:20", null, null],
+  T2: ["13:00-13:45", "13:50-14:35", "14:40-15:25", "15:30-16:15", "16:20-17:05", null],
+  T3: ["08:00-08:45", "08:50-09:35", "09:40-10:25", "10:35-11:20", "11:25-12:10", "12:10-12:55"],
+  T6: [null, "13:00-13:45", "13:50-14:35", "14:40-15:25", "15:30-16:15", "16:20-17:05"],
+  T7: ["08:00-08:45", "08:50-09:35", "09:40-10:25", "10:35-11:20", "11:25-12:10", "12:10-12:55"],
+};
+
+const N = null;
+const CLASSES = {
+  "1A": { t: "T1", d: [
+    ["Kelajak soati","Matematika","Alifbe","Ingliz tili",N,N],
+    ["Matematika","Ona tili","Musiqa","Jismoniy tarbiya","Yozuv",N],
+    ["Matematika","Alifbe","Yozuv","Informatika",N,N],
+    ["Matematika","Alifbe","Yozuv","Tasviriy san'at",N,N],
+    ["Matematika","Tabiiy fan","Tarbiya","Texnologiya",N,N],
+    [N,N,N,N,N,N]] },
+  "1B": { t: "T1", d: [
+    ["Kelajak soati","Ingliz tili","Matematika","Alifbe","Yozuv",N],
+    ["Matematika","Musiqa","Jismoniy tarbiya","Alifbe","Yozuv",N],
+    ["Matematika","Alifbe","Yozuv","Informatika",N,N],
+    ["Matematika","Alifbe","Yozuv","Tasviriy san'at",N,N],
+    ["Matematika","Tabiiy fan","Tarbiya","Texnologiya",N,N],
+    [N,N,N,N,N,N]] },
+  "1V": { t: "T1", d: [
+    ["Kelajak soati","Matematika","Alifbe","Yozuv",N,N],
+    ["Matematika","Alifbe","Musiqa","Jismoniy tarbiya",N,N],
+    ["Matematika","Ingliz tili","Alifbe","Yozuv",N,N],
+    ["Matematika","Alifbe","Yozuv","Informatika",N,N],
+    ["Matematika","Tabiiy fan","Tarbiya","Tasviriy san'at",N,N],
+    [N,N,N,N,N,N]] },
+  "2A": { t: "T2", d: [
+    ["Kelajak soati","Ingliz tili","Rus tili","Matematika","Tabiiy fan",N],
+    ["Matematika","Ona tili","Musiqa","O'qish","Informatika",N],
+    ["Matematika","Ona tili","O'zbek tili","Ingliz tili","O'qish",N],
+    ["Matematika","Dene tarbiya","Ona tili","O'qish","Tarbiya",N],
+    ["Matematika","Dene tarbiya","O'zbek tili","Texnologiya","Tasviriy san'at",N],
+    [N,N,N,N,N,N]] },
+  "2B": { t: "T2", d: [
+    ["Kelajak soati","Rus tili","Ingliz tili","Musiqa","Matematika",N],
+    ["Matematika","Ona tili","O'qish","Jismoniy tarbiya","Tabiiy fan",N],
+    ["Rus tili","Matematika","Ingliz tili","Ona tili","O'qish",N],
+    ["Matematika","O'qish","Ona tili","Tarbiya","Informatika",N],
+    ["Matematika","Ona tili","Jismoniy tarbiya","Tasviriy san'at","Texnologiya",N],
+    [N,N,N,N,N,N]] },
+  "2V": { t: "T2", d: [
+    ["Kelajak soati","Ingliz tili","Matematika","O'qish","Rus tili",N],
+    ["Musiqa","Matematika","Ona tili","O'qish","Jismoniy tarbiya",N],
+    ["Matematika","Ona tili","O'qish","Tarbiya","Informatika",N],
+    ["Ingliz tili","Matematika","Ona tili","Texnologiya","Rus tili",N],
+    ["Matematika","Ona tili","Tabiiy fan","Jismoniy tarbiya","Tasviriy san'at",N],
+    [N,N,N,N,N,N]] },
+  "3A": { t: "T3", d: [
+    ["Kelajak soati","Rus tili","Ingliz tili","O'zbek tili","Matematika",N],
+    ["Matematika","Ona tili","O'qish","Tabiiy fan","Tasviriy san'at",N],
+    ["Matematika","Dene tarbiya","Ingliz tili","Matematika","Ingliz tili",N],
+    ["Rus tili","Matematika","Dene tarbiya","Tasviriy san'at","Tabiiy fan",N],
+    ["Matematika","O'qish","O'zbek tili","Matematika","Texnologiya",N],
+    [N,N,N,N,N,N]] },
+  "3B": { t: "T3", d: [
+    ["Kelajak soati","Jismoniy tarbiya","Rus tili","Matematika","Ingliz tili",N],
+    ["Matematika","Ingliz tili","Ona tili","O'qish","Informatika",N],
+    ["Matematika","Ona tili","O'qish","Tarbiya","Musiqa",N],
+    ["Matematika","Ona tili","Rus tili","O'qish","Texnologiya",N],
+    ["Matematika","Ona tili","Jismoniy tarbiya","Tabiiy fan","Tasviriy san'at",N],
+    [N,N,N,N,N,N]] },
+  "3V": { t: "T3", d: [
+    ["Kelajak soati","Rus tili","Tarbiya","Matematika","O'qish",N],
+    ["Matematika","Ona tili","Ingliz tili","Tabiiy fan",N,N],
+    ["Ona tili","Rus tili","Matematika","Ingliz tili","Tabiiy fan",N],
+    ["Matematika","Ona tili","Tasviriy san'at","Jismoniy tarbiya","O'qish",N],
+    ["Matematika","Musiqa","Ona tili","O'qish","Informatika",N],
+    [N,N,N,N,N,N]] },
+  "4A": { t: "T2", d: [
+    ["Kelajak soati","Ingliz tili","Rus tili","Ona tili","Matematika",N],
+    ["Matematika","Ingliz tili","O'qish","Dene tarbiya","Musiqa",N],
+    ["Matematika","O'zbek tili","Ona tili","Tarbiya","Tasviriy san'at",N],
+    ["Matematika","Ona tili","O'qish","Tabiiy fan","Dene tarbiya",N],
+    ["Matematika","O'zbek tili","O'qish","Texnologiya","Informatika",N],
+    [N,N,N,N,N,N]] },
+  "4B": { t: "T2", d: [
+    ["Kelajak soati","Ingliz tili","Matematika","Ona tili","O'qish",N],
+    ["Matematika","O'qish","Ona tili","Musiqa","Informatika",N],
+    ["Matematika","Ingliz tili","Jismoniy tarbiya","Ona tili","Tasviriy san'at",N],
+    ["Matematika","Ona tili","Jismoniy tarbiya","Tarbiya","Rus tili",N],
+    ["Matematika","Tabiiy fan","Rus tili","O'qish","Texnologiya",N],
+    [N,N,N,N,N,N]] },
+  "4V": { t: "T2", d: [
+    ["Kelajak soati","Matematika","Musiqa","Ingliz tili","Ona tili",N],
+    ["Matematika","Ona tili","O'qish","Tasviriy san'at","Jismoniy tarbiya",N],
+    ["Matematika","O'qish","Informatika","Ingliz tili","Tarbiya",N],
+    ["Matematika","Ona tili","Rus tili","O'qish","Texnologiya",N],
+    ["Matematika","Tabiiy fan","Rus tili","Jismoniy tarbiya","Musiqa",N],
+    [N,N,N,N,N,N]] },
+  "5A": { t: "T2", d: [
+    ["Kelajak soati","Matematika","Qozoq tili","Ingliz tili","Texnologiya",N],
+    ["Matematika","Tasviriy san'at","Ingliz tili","Tarix","Tabiiy fan",N],
+    ["Matematika","Qozoq tili","Adabiyot","O'zbek tili","Dene tarbiya",N],
+    ["Dene tarbiya","Rus tili","O'zbek tili","Tarix","Ingliz tili",N],
+    ["Matematika","O'zbek tili","Informatika","Tabiiy fan","Musiqa",N],
+    ["Matematika","Tarix","Tarbiya","Ingliz tili",N,N]] },
+  "5V": { t: "T2", d: [
+    ["Kelajak soati","Ona tili","Matematika","Adabiyot","Jismoniy tarbiya",N],
+    ["Tabiiy fan","Matematika","Ingliz tili","Tasviriy san'at","Tarix",N],
+    ["Ona tili","Matematika","Informatika","Adabiyot","Ingliz tili",N],
+    ["Rus tili","Ona tili","Ingliz tili","Jismoniy tarbiya","Texnologiya",N],
+    ["Rus tili","Matematika","Tabiiy fan","Musiqa",N,N],
+    ["Ona tili","Matematika","Ingliz tili","Tarix","Tarbiya",N]] },
+  "6A": { t: "T6", d: [
+    ["Kelajak soati","O'zbek tili","Matematika","Qozoq tili","Tabiiy fan","Dene tarbiya"],
+    ["Tabiiy fan","Matematika","Tarix","Ingliz tili","Texnologiya","Texnologiya"],
+    ["Ingliz tili","Matematika","O'zbek tili","Informatika","Musiqa",N],
+    ["Qozoq tili","Tarix","Adabiyot","Tabiiy fan","Ingliz tili","Dene tarbiya"],
+    ["O'zbek tili","Rus tili","Matematika","Tabiiy fan",N,N],
+    ["Ingliz tili","Matematika","Adabiyot","Tarbiya",N,N]] },
+  "6B": { t: "T6", d: [
+    ["Kelajak soati","Ona tili","Tabiiy fan","Matematika","Musiqa",N],
+    ["Informatika","Ingliz tili","Tabiiy fan","Matematika","Tasviriy san'at","Texnologiya"],
+    ["Ona tili","Tarix","Adabiyot","Matematika","Ingliz tili","Jismoniy tarbiya"],
+    ["Ona tili","Jismoniy tarbiya","Tarix","Ingliz tili","Rus tili","Tarbiya"],
+    ["Ona tili","Tabiiy fan","Adabiyot","Matematika","Texnologiya","Texnologiya"],
+    ["Tarix","Rus tili","Ingliz tili","Matematika",N,N]] },
+  "6V": { t: "T6", d: [
+    ["Kelajak soati","Ona tili","Adabiyot","Matematika","Tabiiy fan","Rus tili"],
+    ["Ingliz tili","Tarix","Matematika","Tabiiy fan","Musiqa","Texnologiya"],
+    ["Informatika","Ingliz tili","Matematika","Jismoniy tarbiya","Texnologiya","Texnologiya"],
+    ["Ingliz tili","Ona tili","Tarix","Adabiyot","Jismoniy tarbiya",N],
+    ["Ona tili","Matematika","Tarbiya","Tasviriy san'at","Tabiiy fan",N],
+    ["Ona tili","Ingliz tili","Matematika","Rus tili",N,N]] },
+  "7A": { t: "T7", d: [
+    ["Kelajak soati","Ximiya","Ingliz tili","Biologiya","Matematika","O'zbek tili"],
+    ["Ingliz tili","Dene tarbiya","Matematika","Biologiya","Geografiya","O'zbekiston tarixi"],
+    ["O'zbek tili","Dene tarbiya","Rus tili","Musiqa","Matematika","Qozoq tili"],
+    ["Adabiyot","Ingliz tili","Adabiyot","Texnologiya","Texnologiya","Jahon tarixi"],
+    ["Fizika","O'zbek tili","Ximiya","Tasviriy san'at","Matematika","Tarbiya"],
+    ["Ingliz tili","Geografiya","Fizika","O'zbekiston tarixi","Matematika","Informatika"]] },
+  "7B": { t: "T7", d: [
+    ["Kelajak soati","Ona tili","Musiqa","Matematika","Rus tili","Ingliz tili"],
+    ["Biologiya","Texnologiya","Texnologiya","Matematika","Jismoniy tarbiya","Geografiya"],
+    ["Rus tili","Matematika","Informatika","Tarbiya","Jahon tarixi","Ingliz tili"],
+    ["Jismoniy tarbiya","Ximiya","O'zbekiston tarixi","Adabiyot","Tasviriy san'at","Ingliz tili"],
+    ["Ximiya","Geografiya","Biologiya","Fizika","Matematika","Ona tili"],
+    ["Ona tili","Ingliz tili","Adabiyot","Fizika","Matematika","O'zbekiston tarixi"]] },
+  "7V": { t: "T7", d: [
+    ["Kelajak soati","Texnologiya","Texnologiya","Ximiya","Ona tili","Matematika"],
+    ["Geografiya","Biologiya","Jismoniy tarbiya","Ingliz tili","O'zbekiston tarixi","Matematika"],
+    ["Jismoniy tarbiya","Ingliz tili","Matematika","Informatika","Tarbiya","Texnologiya"],
+    ["O'zbekiston tarixi","Fizika","Ximiya","Geografiya","Biologiya","Tasviriy san'at"],
+    ["Musiqa","Ximiya","Fizika","Geografiya","Ona tili","Matematika"],
+    ["Fizika","Matematika","Rus tili","Adabiyot","Ona tili","Ingliz tili"]] },
+  "8A": { t: "T7", d: [
+    ["Kelajak soati","Ximiya","Geometriya","Qozoq tili","Fizika","O'zbekiston tarixi"],
+    ["Ingliz tili","Geometriya","Huquq","Ona tili","Ximiya","Ona tili"],
+    ["Ingliz tili","Algebra","Ona tili","Adabiyot","Biologiya","Matematika"],
+    ["Ingliz tili","Dene tarbiya","Informatika","Tarix","Fizika",N],
+    ["Qozoq tili","Geografiya","Biologiya","Texnologiya","Ona tili",N],
+    ["Algebra","Ximiya","Qozoq tili","Adabiyot",N,N]] },
+  "8B": { t: "T7", d: [
+    ["Kelajak soati","Algebra","Ona tili","Ingliz tili","Tarix","O'zbek tili"],
+    ["Geometriya","Ximiya","Biologiya","Qozoq tili","Fizika",N],
+    ["Texnologiya","Dene tarbiya","Ingliz tili","Ona tili","Informatika",N],
+    ["Tarix","Geografiya","Jahon tarixi","Qozoq tili","Fizika",N],
+    ["Ona tili","Algebra","Adabiyot","Biologiya","Tarbiya",N],
+    ["Rus tili","Adabiyot","Iqtisod","Biologiya",N,N]] },
+  "8V": { t: "T7", d: [
+    ["Kelajak soati","Ona tili","Chizma","Huquq","Algebra","Jismoniy tarbiya"],
+    ["O'zbekiston tarixi","Fizika","Kimyo","Geometriya","Biologiya",N],
+    ["Informatika","Ingliz tili","Jismoniy tarbiya","Algebra","Ona tili",N],
+    ["Geografiya","Texnologiya","Tarbiya","Ingliz tili","Ona tili","Fizika"],
+    ["Iqtisod","Biologiya","Rus tili","Geometriya","Adabiyot","Jahon tarixi"],
+    ["Rus tili","Ingliz tili","Kimyo","Algebra","O'zbekiston tarixi",N]] },
+  "9A": { t: "T7", d: [
+    ["Kelajak soati","O'zbek tili","Algebra","Fizika","Texnologiya","Ximiya"],
+    ["Geometriya","Tabiiy fan","O'zbekiston tarixi","Geografiya","Ingliz tili","Informatika"],
+    ["Ingliz tili","Algebra","Jahon tarixi","Adabiyot","O'zbek tili",N],
+    ["Chizma","Qozoq tili","O'zbek tili","Biologiya","Qozoq tili",N],
+    ["Geometriya","Texnologiya","O'zbekiston tarixi","Dene tarbiya","Fizika","Informatika"],
+    ["Ximiya","Algebra","Geografiya/iqtisod","Huquq","Rus tili",N]] },
+  "9B": { t: "T7", d: [
+    ["Kelajak soati","Algebra","Fizika","Texnologiya","Chizmachilik","Ona tili"],
+    ["Geometriya","Informatika","Ingliz tili","Jismoniy tarbiya","Geografiya","Kimyo"],
+    ["Ona tili","Tarbiya","Adabiyot","O'zbekiston tarixi","Ingliz tili","Algebra"],
+    ["Ona tili","Jaxon tarix","Tarix","Biologiya","Adabiyot","Jismoniy tarbiya"],
+    ["Geometriya","Informatika","Jismoniy tarbiya","Rus tili","O'zbekiston tarixi","Fizika"],
+    ["Algebra","Kimyo","Huquq","Rus tili","Biologiya","Fizika"]] },
+  "9V": { t: "T7", d: [
+    ["Kelajak soati","Informatika","Rus tili","Ona tili","Texnologiya","Algebra"],
+    ["Jismoniy tarbiya","Geografiya","Fizika","O'zbekiston tarixi","Ingliz tili","Geometriya"],
+    ["Tarbiya","Ingliz tili","Ona tili","Jaxon tarix","Algebra","Jismoniy tarbiya"],
+    ["Biologiya","Ona tili","Geografiya/iqtisod","Ingliz tili","Kimyo","Adabiyot"],
+    ["Informatika","Geometriya","Adabiyot","O'zbekiston tarixi","Chizmachilik",N],
+    ["Huquq","Rus tili","Biologiya","Fizika","Kimyo",N]] },
+  "10A": { t: "T7", d: [
+    ["Kelajak soati","O'zbek tili","Huquq","Algebra","Fizika",N],
+    ["Jahon tarixi","Informatika","Ximiya","CHQBT","Tarbiya",N],
+    ["Ingliz tili","Qozoq tili","Algebra","O'zbek tili",N,N],
+    ["CHQBT","Biologiya","Fizika","Geografiya","Tarbiya",N],
+    ["Ingliz tili","Rus tili","Geografiya","Ximiya","Adabiyot",N],
+    ["Geografiya","Biologiya","Ingliz tili","Algebra","Informatika","O'zbekiston tarixi"]] },
+  "10B": { t: "T7", d: [
+    ["Kelajak soati","Geografiya","Ona tili","Algebra","Huquq","Fizika"],
+    ["CHQBT","Tarbiya","Geometriya","Informatika","Kimyo","Fizika"],
+    ["CHQBT","O'zbekiston tarixi","Algebra","Ingliz tili",N,N],
+    ["Adabiyot","Rus tili","Jismoniy tarbiya","Kimyo","Geografiya","Biologiya"],
+    ["Jismoniy tarbiya","Adabiyot","Geometriya","Rus tili","Informatika",N],
+    ["Biologiya","Ona tili","Algebra","Geometriya","Ingliz tili","O'zbekiston tarixi"]] },
+  "11A": { t: "T7", d: [
+    ["Kelajak soati","Dene tarbiya","Ximiya","Fizika","Algebra","Biologiya"],
+    ["Tadbirkorlik","Ingliz tili","Informatika","Geometriya","Biologiya",N],
+    ["Dene tarbiya","O'zbek tili","CHQBT","Algebra","Qozoq tili","Adabiyot"],
+    ["Fizika","CHQBT","Ximiya","Jahon tarixi","O'zbek tili",N],
+    ["Biologiya","Rus tili","O'zbek tili","Geometriya","O'zbekiston tarixi",N],
+    ["Ta'lim","Informatika","Algebra","Informatika","Ingliz tili","Huquq"]] },
+  "11B": { t: "T7", d: [
+    ["Kelajak soati","Fizika","Biologiya","Jismoniy tarbiya","Kimyo","Algebra"],
+    ["Informatika","Tadbirkorlik","CHQBT","Tarbiya","Geometriya",N],
+    ["Algebra","Jismoniy tarbiya","Ingliz tili","Adabiyot","Jahon tarixi",N],
+    ["Kimyo","Fizika","Ona tili","Adabiyot","Rus tili",N],
+    ["CHQBT","Astronomiya","Ona tili","Geometriya","O'zbekiston tarixi",N],
+    ["Informatika","Huquq","Biologiya","Ingliz tili","Algebra",N]] },
+};
+
+const DAY_NAMES = ["Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
+
+function tashkentNow() {
+  const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tashkent", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+  const get = t => p.find(x => x.type === t).value;
+  const wdMap = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  return { wd: wdMap[get("weekday")], min: parseInt(get("hour")) * 60 + parseInt(get("minute")) };
+}
+const toMin = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+function slotRange(s) { const [a, b] = s.split("-"); return [toMin(a), toMin(b)]; }
+
+// Bugungi darslar ro'yxati va hozirgi holat
+function dayStatus(cls, now) {
+  const c = CLASSES[cls];
+  if (!c) return { kind: "none", text: "Sinf topilmadi" };
+  if (now.wd === 6) return { kind: "off", text: "Yakshanba: dam olish kuni", lessons: [] };
+  const dayIdx = now.wd;
+  const times = TIMES[c.t];
+  const lessons = [];
+  c.d[dayIdx].forEach((subj, i) => {
+    if (!subj) return;
+    const ts = times[i];
+    const r = ts ? slotRange(ts) : null;
+    lessons.push({ n: i + 1, name: subj, time: ts, s: r ? r[0] : null, e: r ? r[1] : null });
+  });
+  if (dayIdx === 5 && lessons.length === 0) return { kind: "off", text: "Bugun darslar yo'q", lessons };
+  const timed = lessons.filter(l => l.s !== null);
+  if (timed.length === 0) return { kind: "none", text: "Bugungi darslar vaqti ko'rsatilmagan", lessons };
+  const cur = timed.find(l => now.min >= l.s && now.min < l.e);
+  if (cur) return { kind: "live", cur, text: `Hozir darsda: ${cur.name}`, lessons, left: cur.e - now.min };
+  const next = timed.find(l => l.s > now.min);
+  const last = timed[timed.length - 1];
+  if (now.min < timed[0].s) return { kind: "wait", next: timed[0], text: `Darslar hali boshlanmagan. Birinchi dars: ${timed[0].name}`, lessons };
+  if (next) return { kind: "break", next, text: `Tanaffus. Keyingi dars: ${next.name}`, lessons };
+  return { kind: "done", last, text: `Darslar tugadi. Oxirgi dars: ${last.name}`, lessons };
+}
+
+const CLASS_LIST = Object.keys(CLASSES);
+const SUBJ_EMOJI = [
+  [/matem|algebra|geometr/i, "🔢"], [/alifbe|yozuv|o'qish|oqish|ona tili|adabiy|surat|ozbek|o'zbek/i, "📖"],
+  [/ingliz/i, "🇬🇧"], [/rus|orys/i, "🇷🇺"], [/musiq/i, "🎵"], [/jismon|tarbiya|dene|tadbir/i, "⚽"],
+  [/informat/i, "💻"], [/tabiiy|biolog|ximiya|kimyo|fizika|astronom/i, "🔬"],
+  [/tarix|geograf|jaxon|jahon|iqtisod|huquq/i, "🌍"], [/tasviriy|chizma|rasm/i, "🎨"],
+  [/texnolog|texnal/i, "🛠️"], [/kelajak/i, "⏰"], [/qozoq|ag'ilshin/i, "🗣️"],
+];
+const emoji = name => { for (const [re, e] of SUBJ_EMOJI) if (re.test(name)) return e; return "📚"; };
+
+</script>
+<script>
+  const $ = id => document.getElementById(id);
+  let selClass = null;
+  let viewDay = null;
+
+  function init() {
+    $('schoolLine').textContent = `${CONFIG.school} · ${CONFIG.district} · ${CONFIG.year} o'quv yili`;
+    $('tg').href = CONFIG.adminTg;
+    $('tgName').textContent = CONFIG.adminTgName; $('tgLabel').textContent = CONFIG.adminLabel;
+    $('cls').innerHTML = '<option value="">— sinfni tanlang —</option>' +
+      CLASS_LIST.map(c => `<option value="${c}">${c}</option>`).join('');
+    $('cls').addEventListener('change', () => { selectClass($('cls').value); });
+    $('todayBtn').onclick = () => { viewDay = null; render(); };
+
+    const q = new URLSearchParams(location.search).get('sinf');
+    const saved = (() => { try { return localStorage.getItem('jadval_sinf'); } catch (e) { return null; } })();
+    const start = (q && CLASSES[q]) ? q : (saved && CLASSES[saved] ? saved : null);
+    if (start) selectClass(start);
+    else { $('statusText').textContent = 'Sinfni tanlang'; $('statusSub').textContent = ''; }
+  }
+
+  function selectClass(c) {
+    if (!c || !CLASSES[c]) return;
+    selClass = c;
+    $('cls').value = c;
+    try { localStorage.setItem('jadval_sinf', c); } catch (e) {}
+    viewDay = null;
+    render();
+  }
+
+  function render() {
+    const now = tashkentNow();
+    const st = dayStatus(selClass, now);
+    const todayName = now.wd < 6 ? DAY_NAMES[now.wd] : 'Yakshanba';
+    $('dayLine').textContent = `${selClass} sinf · Bugun: ${todayName}`;
+    const el = $('statusText');
+    el.textContent = st.text;
+    el.className = 'status' + (st.kind === 'live' ? ' live' : '');
+
+    const bar = $('progress');
+    if (st.kind === 'live') {
+      const cur = st.cur;
+      const pct = Math.min(100, Math.max(0, ((now.min - cur.s) / (cur.e - cur.s)) * 100));
+      bar.style.display = 'block';
+      $('progressFill').style.width = pct.toFixed(0) + '%';
+      $('statusSub').textContent = `Tugashiga ${st.left} daqiqa qoldi · ${cur.time}`;
+    } else {
+      bar.style.display = 'none';
+      if (st.kind === 'break' || st.kind === 'wait') $('statusSub').textContent = `Keyingi dars vaqti: ${st.next.time}`;
+      else if (st.kind === 'done') $('statusSub').textContent = `Oxirgi dars vaqti: ${st.last.time}`;
+      else $('statusSub').textContent = '';
+    }
+
+    renderTabs();
+    const dIdx = viewDay === null ? (now.wd < 6 ? now.wd : 0) : viewDay;
+    renderTable(dIdx, now);
+  }
+
+  function renderTabs() {
+    const now = tashkentNow();
+    const cur = viewDay === null ? (now.wd < 6 ? now.wd : 0) : viewDay;
+    $('tabs').innerHTML = DAY_NAMES.map((d, i) =>
+      `<button class="tab ${i === cur ? 'on' : ''}" data-d="${i}">${d}</button>`).join('');
+    $('tabs').querySelectorAll('[data-d]').forEach(b => b.onclick = () => { viewDay = +b.dataset.d; render(); });
+  }
+
+  function renderTable(dIdx, now) {
+    const c = CLASSES[selClass];
+    const times = TIMES[c.t];
+    const rows = c.d[dIdx].map((subj, i) => ({ subj, i, t: times[i] })).filter(r => r.subj);
+    if (!rows.length) { $('table').innerHTML = '<tr><td class="sub">Bu kuni darslar yo\'q</td></tr>'; return; }
+    const isToday = dIdx === now.wd;
+    $('table').innerHTML = rows.map(r => {
+      let cls = '';
+      if (isToday && r.t) {
+        const [a, b] = slotRange(r.t);
+        if (now.min >= a && now.min < b) cls = 'now';
+        else if (now.min >= b) cls = 'done';
+      }
+      return `<tr class="${cls}"><td class="n">${r.i + 1}</td><td class="t">${r.t || '—'}</td><td>${emoji(r.subj)} ${r.subj}</td></tr>`;
+    }).join('');
+  }
+
+  // QR skaner: QR kodda sayt manzili bo'ladi, masalan: https://.../ota-ona/?sinf=11B
+  $('scanBtn').onclick = async () => {
+    const box = $('scanBox'), msg = $('scanMsg');
+    box.style.display = 'block';
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
+      msg.textContent = 'Bu qurilmada skaner ishlamaydi. Sinfni ro\'yxatdan tanlang.';
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const v = $('video');
+      v.srcObject = stream; await v.play();
+      const det = new BarcodeDetector({ formats: ['qr_code'] });
+      const loop = async () => {
+        if (!v.srcObject) return;
+        try {
+          const codes = await det.detect(v);
+          if (codes.length) {
+            const raw = codes[0].rawValue;
+            stream.getTracks().forEach(t => t.stop()); v.srcObject = null;
+            let sinf = raw;
+            try { sinf = new URL(raw).searchParams.get('sinf') || raw; } catch (e) {}
+            sinf = sinf.toUpperCase();
+            if (CLASSES[sinf]) { box.style.display = 'none'; selectClass(sinf); }
+            else { msg.textContent = 'Bu QR kod sinfga mos emas. Qayta urinib ko\'ring.'; }
+            return;
+          }
+        } catch (e) {}
+        requestAnimationFrame(loop);
+      };
+      msg.textContent = 'Kamerani QR kodga qarating';
+      loop();
+    } catch (e) {
+      msg.textContent = 'Kameraga ruxsat berilmadi. Sinfni ro\'yxatdan tanlang.';
+    }
+  };
+
+  init();
+  setInterval(() => { if (selClass) render(); }, 30000);
+</script>
+</body>
+</html>
